@@ -1,5 +1,3 @@
-import React from "react";
-
 export const debounce = (func, wait, immediate) => {
   let timeout;
   return function () {

@@ -1,8 +1,13 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import Gallery from "react-photo-gallery";
 import Carousel, { Modal, ModalGateway } from "react-images";
 import styled from "styled-components";
 import { Header } from "../../atoms/HeaderText/HeaderText";
+import {
+  DATOCMS_GRAPHQL_ENDPOINT,
+  getDatocmsHeaders,
+} from "../../../config/datocms";
+import { datoFileDataProps } from "../../../helpers/cmsGalleryImageData";
 
 const SectionContainer = styled.section`
   padding: 0 5%;
@@ -78,7 +83,26 @@ const Works = () => {
   const [viewerIsOpen, setViewerIsOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [images, setImages] = useState([]);
+
+  const workPhotos = useMemo(() => {
+    const works = data?.data?.allWorks;
+    if (!works?.length) return [];
+    return works.map((work, index) => {
+      const src = work.src || work.image?.url;
+      return {
+        src,
+        width: work.width,
+        height: work.height,
+        alt: work.image?.alt || work.image?.title || "",
+        key: work.id,
+        ...datoFileDataProps(work.image, {
+          "data-cms-context": "works-photo-gallery",
+          "data-cms-work-record-id": work.id,
+          "data-gallery-index": String(index),
+        }),
+      };
+    });
+  }, [data]);
 
   const openLightbox = useCallback((event, { photo, index }) => {
     setCurrentImage(index);
@@ -92,22 +116,18 @@ const Works = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://graphql.datocms.com/", {
+      const response = await fetch(DATOCMS_GRAPHQL_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${process.env.REACT_APP_TOKEN}`,
-        },
+        headers: getDatocmsHeaders(),
         body: JSON.stringify({
-          query: "{ allWorks { id image { id url } src width height } }",
+          query:
+            "{ allWorks { id image { id url basename title alt } src width height } }",
         }),
       });
 
       const myData = await response.json();
 
       setData(myData);
-      console.log(data.data.allWorks);
       setLoading(false);
     } catch (error) {
       console.error("Błąd pobierania danych:", error);
@@ -126,7 +146,7 @@ const Works = () => {
   return (
     <SectionContainer>
       <Header>Gallery</Header>
-      <Gallery photos={data.data.allWorks} onClick={openLightbox} />
+      <Gallery photos={workPhotos} onClick={openLightbox} />
       <ModalGateway>
         {viewerIsOpen ? (
           <Modal onClose={closeLightbox}>

@@ -5,6 +5,11 @@ import { useParams } from "react-router-dom";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import Carousel, { Modal, ModalGateway } from "react-images";
 import Loading from "../../organisms/Loading/Loading";
+import {
+  DATOCMS_GRAPHQL_ENDPOINT,
+  getDatocmsHeaders,
+} from "../../../config/datocms";
+import { datoFileDataProps } from "../../../helpers/cmsGalleryImageData";
 
 const OurWorksContainer = styled.div`
   width: 80vw;
@@ -66,16 +71,11 @@ const OurWorks = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://graphql.datocms.com/", {
+      const response = await fetch(DATOCMS_GRAPHQL_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          // Authorization: `Bearer ${process.env.REACT_APP_TOKEN}`,
-          Authorization: `Bearer 2aa56d799dab452e317773613cc9ed`,
-        },
+        headers: getDatocmsHeaders(),
         body: JSON.stringify({
-          query: `{ allGalleries(filter: {id: {eq: ${id}}}) { id name preview { id url } gallery { id url } } }`,
+          query: `{ allGalleries(filter: {id: {eq: ${id}}}) { id name preview { id url basename title alt } gallery { id url basename title alt } } }`,
         }),
       });
 
@@ -117,7 +117,16 @@ const OurWorks = () => {
               key={image.id}
               src={image.url}
               style={{ width: "100%", display: "block" }}
-              alt=""
+              alt={
+                image.alt ||
+                image.title ||
+                `${data.data.allGalleries[0].name} — zdjęcie ${i + 1}`
+              }
+              {...datoFileDataProps(image, {
+                "data-cms-context": "gallery-detail-grid",
+                "data-cms-gallery-record-id": data.data.allGalleries[0].id,
+                "data-gallery-index": String(i),
+              })}
             />
           ))}
         </Masonry>

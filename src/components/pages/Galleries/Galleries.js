@@ -3,6 +3,11 @@ import styled from "styled-components";
 import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import Loading from "../../organisms/Loading/Loading";
+import {
+  DATOCMS_GRAPHQL_ENDPOINT,
+  getDatocmsHeaders,
+} from "../../../config/datocms";
+import { datoFileDataProps } from "../../../helpers/cmsGalleryImageData";
 
 const GalleriesSection = styled.section`
   position: absolute;
@@ -55,17 +60,12 @@ const Galleries = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://graphql.datocms.com/", {
+      const response = await fetch(DATOCMS_GRAPHQL_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          // Authorization: `Bearer ${process.env.REACT_APP_TOKEN}`,
-          Authorization: `Bearer 2aa56d799dab452e317773613cc9ed`,
-        },
+        headers: getDatocmsHeaders(),
         body: JSON.stringify({
           query:
-            "{ allGalleries { id name preview { id url } gallery { id url } priority } }",
+            "{ allGalleries { id name preview { id url basename title alt } gallery { id url basename title alt } priority } }",
         }),
       });
 
@@ -75,7 +75,6 @@ const Galleries = () => {
         myData.data.allGalleries.sort((a, b) => a.priority - b.priority);
       }
       setData(myData);
-      console.log(myData.data.allGalleries);
       setLoading(false);
     } catch (error) {
       console.error("Błąd pobierania danych:", error);
@@ -103,7 +102,14 @@ const Galleries = () => {
           <h2>{item.name}</h2>
           <Link to={`/gallery/${item.id}`}>
             <ImgContainer>
-              <img src={item.preview.url} alt="gallery_image" />
+              <img
+                src={item.preview.url}
+                alt={item.preview.alt || item.name || "Podgląd galerii"}
+                {...datoFileDataProps(item.preview, {
+                  "data-cms-context": "galleries-list-preview",
+                  "data-cms-gallery-record-id": item.id,
+                })}
+              />
             </ImgContainer>
           </Link>
         </GalleryContainer>
